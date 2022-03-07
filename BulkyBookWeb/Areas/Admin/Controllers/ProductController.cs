@@ -19,8 +19,7 @@ namespace BulkyBookWeb.Areas.Admin.Controllers
 
         public IActionResult Index()
         {
-            IEnumerable<Product> productList = _unitOfWork.Product.GetAll();
-            return View(productList);
+            return View();
         }
 
         // GET
@@ -53,9 +52,9 @@ namespace BulkyBookWeb.Areas.Admin.Controllers
             // Product exist, update it.
             else
             {
+                productVM.Product = _unitOfWork.Product.GetFirstOrDefault(u => u.Id == id);
+                return View(productVM);
             }
-
-            return View(productVM);
         }
 
         // POST
@@ -65,22 +64,40 @@ namespace BulkyBookWeb.Areas.Admin.Controllers
         {
             if (ModelState.IsValid)
             {
-                string retrieveImage = _webHostEnvironment.WebRootPath;
-
-                if (retrieveImage != null)
-                { 
+                if (file != null)
+                {
+                    string retrieveImage = _webHostEnvironment.WebRootPath;
                     string fileName = Guid.NewGuid().ToString();
                     var uploads = Path.Combine(retrieveImage, @"images\products");
                     var extension = Path.GetExtension(file.FileName);
+
+                    if (obj.Product.ImageURl != null)
+                    {
+                        var oldImagePath = Path.Combine(retrieveImage, obj.Product.ImageURl.TrimStart('/'));
+                        if (System.IO.File.Exists(oldImagePath))
+                        {
+                            System.IO.File.Delete(oldImagePath);
+                        }
+                    }
 
                     using (var fileStreams = new FileStream(Path.Combine(uploads, fileName + extension), FileMode.Create))
                     {
                         file.CopyTo(fileStreams);
                     }
 
-                    obj.Product.ImageURl = @"images\products\" + fileName + extension;
+                    obj.Product.ImageURl = @"images/products/" + fileName + extension;
+                    
                 }
-                _unitOfWork.Product.Update(obj.Product);
+
+                if (obj.Product.Id == 0)
+                {
+                    _unitOfWork.Product.Add(obj.Product);
+                }
+                else
+                {
+                    _unitOfWork.Product.Update(obj.Product);
+                }
+
                 _unitOfWork.Save();
                 TempData.Add("success", "The Product is sucessfully updated.");
                 return RedirectToAction("Index");
@@ -124,5 +141,17 @@ namespace BulkyBookWeb.Areas.Admin.Controllers
             TempData["success"] = "The cover type is deleted";
             return RedirectToAction("Index");
         }
+
+        #region API CALLS
+
+        [HttpGet]
+        public IActionResult GetAll()
+        {
+            var productList = _unitOfWork.Product.GetAll(includeProperties: "Category,CoverType");
+
+            return Json(new { data = productList });
+        }
+
+        #endregion
     }
 }
