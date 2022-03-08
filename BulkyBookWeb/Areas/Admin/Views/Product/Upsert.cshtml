@@ -108,6 +108,12 @@
         <partial name="_ValidationScriptsPartial"></partial>
     }
     <script>
+        tinymce.init({
+            selector: 'textarea',
+            plugins: 'advlist autolink lists link image charmap print preview hr anchor pagebreak',
+            toolbar_mode: 'floating',
+        });
+
         function ValidateInput()
         {
             const image = document.getElementById("imageBox");

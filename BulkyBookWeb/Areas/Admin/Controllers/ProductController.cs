@@ -73,7 +73,7 @@ namespace BulkyBookWeb.Areas.Admin.Controllers
 
                     if (obj.Product.ImageURl != null)
                     {
-                        var oldImagePath = Path.Combine(retrieveImage, obj.Product.ImageURl.TrimStart('/'));
+                        var oldImagePath = Path.Combine(retrieveImage, obj.Product.ImageURl.TrimStart('\\'));
                         if (System.IO.File.Exists(oldImagePath))
                         {
                             System.IO.File.Delete(oldImagePath);
@@ -106,41 +106,6 @@ namespace BulkyBookWeb.Areas.Admin.Controllers
             return View(obj);
         }
 
-        // Get.
-        public IActionResult Delete(int Id)
-        {
-            if (Id <= 0)
-            {
-                return NotFound();
-            }
-
-            var coverTypeObject = _unitOfWork.Product.GetFirstOrDefault(x => x.Id == Id);
-
-            if (coverTypeObject == null)
-            {
-                return NotFound();
-            }
-
-            return View(coverTypeObject);
-        }
-
-        // Post.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public IActionResult DeleteOnPost(int Id)
-        {
-            var ProductObject = _unitOfWork.Product.GetFirstOrDefault(x => x.Id == Id);
-
-            if (ProductObject == null)
-            {
-                return NotFound();
-            }
-
-            _unitOfWork.Product.Remove(ProductObject);
-            _unitOfWork.Save();
-            TempData["success"] = "The cover type is deleted";
-            return RedirectToAction("Index");
-        }
 
         #region API CALLS
 
@@ -150,6 +115,29 @@ namespace BulkyBookWeb.Areas.Admin.Controllers
             var productList = _unitOfWork.Product.GetAll(includeProperties: "Category,CoverType");
 
             return Json(new { data = productList });
+        }
+
+        // Post.
+        [HttpDelete]
+        public IActionResult Delete(int? Id)
+        {
+            var ProductObject = _unitOfWork.Product.GetFirstOrDefault(x => x.Id == Id);
+
+            if (ProductObject == null)
+            {
+                return Json(new { success = false, message = "Error while deleting" });
+            }
+
+            var oldImagePath = Path.Combine(_webHostEnvironment.WebRootPath, ProductObject.ImageURl.TrimStart('\\'));
+            if (System.IO.File.Exists(oldImagePath))
+            {
+                System.IO.File.Delete(oldImagePath);
+            }
+
+            _unitOfWork.Product.Remove(ProductObject);
+            _unitOfWork.Save();
+
+            return Json(new { success = true, message = "The product is deleted" });
         }
 
         #endregion
